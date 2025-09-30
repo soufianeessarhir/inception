@@ -1,4 +1,21 @@
 sevices:
 
   nginx:
-    
+    build:
+      context:
+        
+  mariadb:
+     build:
+      context:
+
+  wordpress:
+      build:
+      context:
+
+volumes:
+
+
+networks:
+
+
+secrets:
