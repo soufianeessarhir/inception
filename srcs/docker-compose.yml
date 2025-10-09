@@ -5,11 +5,11 @@ sevices:
       context:
         
   mariadb:
-     build:
+    build:
       context:
 
   wordpress:
-      build:
+    build:
       context:
 
 volumes:
