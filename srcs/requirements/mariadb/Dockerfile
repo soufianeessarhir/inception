@@ -5,5 +5,4 @@ chown -R mysql:mysql /run/mysqld/  /var/lib/mysql
 COPY --chmod=644  conf/server.conf /etc/my.cnf.d/mariadb-server.cnf
 COPY --chmod=700  tools/setup.sh /usr/local/bin/setup.sh
 EXPOSE 3306
-USER mysql
 ENTRYPOINT ["/usr/local/bin/setup.sh"]

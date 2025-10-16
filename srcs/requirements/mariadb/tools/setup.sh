@@ -17,6 +17,7 @@ CREATE USER IF NOT EXISTS '${DB_USER}'@'%' IDENTIFIED BY '${DB_PASSWORD}';
 GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'%';
 FLUSH PRIVILEGES;
 EOF
+
 mariadbd --user=mysql --bootstrap --verbose=0 < /tmp/init_secure.sql
 rm -rf /tmp/init_secure.sql
 fi
