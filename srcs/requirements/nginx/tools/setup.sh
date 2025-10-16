@@ -10,4 +10,4 @@ if [ ! -f "${CERTS_PATH}/nginx.cert"  || ! -f "${CERTS_PATH}/nginx.key" ] ; then
     chmod 600  "${CERTS_PATH}/nginx.key"
 fi
 
-exec "$@"
+exec "nginx"
