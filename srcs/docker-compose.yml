@@ -6,7 +6,7 @@ services:
     image: nginx:inception
     container_name: nginx
     volumes:
-      - wordpress-data:/var/lib/html:ro
+      - wordpress-data:/var/www/html:ro
     networks:
       - inception
     ports:
@@ -56,13 +56,14 @@ services:
     networks:
       - inception
     healthcheck:
-      test: ["CMD","mariadb-admin","ping","-h","localhost","--silent"]
+      test: ["CMD-SHELL", "mysqladmin ping -u ${DB_USER} -p$$(cat /run/secrets/db_password) --socket=/var/run/mysqld/mysqld.sock --silent || exit 1"]
       interval: 5s
-      timeout: 3s 
+      timeout: 3s
       retries: 5
       start_period: 40s
     environment:
       - DB_NAME
+      - DB_USER
     secrets:
       - db_password
       - db_root_password
