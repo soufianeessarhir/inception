@@ -19,30 +19,20 @@ fi
 
 if [ ! -f "/var/www/html/wp-config.php" ]; then
 
-    wp config create\
-    --path="/var/www/html"\
-    --dbname="${DB_NAME}"\
-    --dbuser="${DB_USER}"\
-    --dbhost="${DB_HOST}"\
-    --dbpass="${DB_PASSWORD}"\
-    --allow-root
+    wp config create --path="/var/www/html" \
+    --dbname="${DB_NAME}" --dbuser="${DB_USER}" \
+    --dbhost="${DB_HOST}" --dbpass="${DB_PASSWORD}" \
+    --allow-root 
 
-    wp core install \
-    --url="https://${DOMAIN_NAME}"\
-    --title="${WP_TITLE}"\
-    --admin_user="${WP_ADMIN_USER}"\
-    --admin_email="${WP_ADMIN_EMAIL}"\
-    --admin_password="${WP_ADMIN_PASSWORD}"\
-    --path="/var/www/html"\
-    --alow-root
 
-    wp user create \
-    "${WP_USER}"\
-    "${WP_USER_EMAIL}"\
-    --user_pass="${WP_USER_PASSWORD}"
-    --role=auther\
-    --path="/var/www/html"\
-    --allow-root
+    wp core install --url="https://${DOMAIN_NAME}" \
+    --title="${WP_TITLE}" --admin_user="${WP_ADMIN_USER}" \
+    --admin_email="${WP_ADMIN_EMAIL}" --admin_password="${WP_ADMIN_PASSWORD}" \
+    --path="/var/www/html" --alow-root --skip-email
+
+    wp user create  "${WP_USER}" "${WP_USER_EMAIL}"\
+    --user_pass="${WP_USER_PASSWORD}" --role=auther \
+    --path="/var/www/html" --allow-root --skip-email
 fi
 
 exec "$@"

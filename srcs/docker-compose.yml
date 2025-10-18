@@ -3,13 +3,14 @@ services:
     build:
       context: ./requirements/nginx
       dockerfile: Dockerfile
+    image: nginx:inception
     container_name: nginx
     volumes:
       - wordpress-data:/var/lib/html:ro
     networks:
       - inception
     ports:
-      - 1443:443
+      - "1443:443"
     environment:
       - CERTS_PATH
       - DOMAIN_NAME
@@ -20,6 +21,7 @@ services:
     build:
       context: ./requirements/wordpress
       dockerfile: Dockerfile
+    image: wordpress:inception
     container_name: wordpress
     volumes: 
       - wordpress-data:/var/www/html
@@ -47,6 +49,7 @@ services:
     build:
       context: ./requirements/mariadb
       dockerfile: Dockerfile
+    image: mariadb:inception
     container_name: mariadb
     volumes:
       - mariadb-data:/var/lib/mysql
