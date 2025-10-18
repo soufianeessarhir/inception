@@ -1,9 +1,9 @@
 #!/bin/sh
-DB_PASSWORD=$(cat /run/secrets/db_password.txt)
-DB_ROOT_PASSWORD=$(cat /run/secrets/db_root_password.txt)
+DB_PASSWORD=$(cat /run/secrets/db_password)
+DB_ROOT_PASSWORD=$(cat /run/secrets/db_root_password)
 
 if [ ! -d /var/lib/mysql/mysql  ]; then
-mariadb-install-db --user=mysql --datadir=/var/lib/mysql >> /dev/null
+mariadb-install-db --user=mysql --datadir=/var/lib/mysql
 cat << EOF > /tmp/init_secure.sql
 USE mysql;
 FLUSH PRIVILEGES;
@@ -21,5 +21,4 @@ EOF
 mariadbd --user=mysql --bootstrap --verbose=0 < /tmp/init_secure.sql
 rm -rf /tmp/init_secure.sql
 fi
-
-exec "mariadbd"
+exec mariadbd --user=mysql --datadir=/var/lib/mysql
