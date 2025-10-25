@@ -68,6 +68,26 @@ services:
       - db_password
       - db_root_password
     restart: unless-stopped
+  redis:
+    build:
+      context: ./requirements/bonus/redis
+      dockerfile: Dockerfile
+    image: redis:inception
+    container_name: redis
+
+  adminer:
+    build:
+      context: ./requirements/adminer
+      dockerfile: Dockerfile
+    image: adminer:inception
+    container_name: adminer
+  ftp:
+    build:
+      context: ./requirements/ftp
+      dockerfile: Dockerfile
+    image: ftp:inception
+    conatainer_name: ftp
+  
 volumes:
     mariadb-data:
       driver: local
