@@ -60,7 +60,7 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
-      start_period: 40s
+      start_period: 10s
     environment:
       - DB_NAME
       - DB_USER
@@ -74,19 +74,35 @@ services:
       dockerfile: Dockerfile
     image: redis:inception
     container_name: redis
-
+    networks:
+      - inception
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD","redis-cli",ping]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
   adminer:
     build:
       context: ./requirements/adminer
       dockerfile: Dockerfile
     image: adminer:inception
     container_name: adminer
+
+  
   ftp:
     build:
       context: ./requirements/ftp
       dockerfile: Dockerfile
     image: ftp:inception
     conatainer_name: ftp
+  portainer:
+    build:
+      context: ./requirements/portainer
+      dockerfile: Dockerfile
+    image: portainer:inception
+    conatainer_name: portainer
   
 volumes:
     mariadb-data:
