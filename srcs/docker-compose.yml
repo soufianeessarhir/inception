@@ -45,6 +45,8 @@ services:
     depends_on:
       mariadb:
         condition: service_healthy
+      redis:
+        condition: service_healthy
   mariadb:
     build:
       context: ./requirements/mariadb
@@ -85,24 +87,40 @@ services:
       start_period: 10s
   adminer:
     build:
-      context: ./requirements/adminer
+      context: ./requirements/bonus/adminer
       dockerfile: Dockerfile
     image: adminer:inception
     container_name: adminer
-
-  
+    restart: always
+    networks:
+      - inception
+    depends_on:
+      mariadb:
+        condition: service_healthy
   ftp:
     build:
-      context: ./requirements/ftp
+      context: ./requirements/bonus/ftp
       dockerfile: Dockerfile
     image: ftp:inception
-    conatainer_name: ftp
+    container_name: ftp
+    restart: always
+    networks:
+      - inception
+    ports:
+      - "21:21"
+      - "21000-21010:21000-21010"
+    environment:
+      - FTP_USER
+    secrets:
+      - ftp_pass
+    volumes:
+      - wordpress-data:/var/www/html
   portainer:
     build:
-      context: ./requirements/portainer
+      context: ./requirements/bonus/portainer
       dockerfile: Dockerfile
     image: portainer:inception
-    conatainer_name: portainer
+    container_name: portainer
   
 volumes:
     mariadb-data:
@@ -117,6 +135,11 @@ volumes:
         type: none
         o: bind
         device: /home/${USER}/data/wordpress
+    portainer-data:
+        driver: local
+        driver_opts:
+          o: bind
+          device: /home/${USER}/data/portiner
 networks:
   inception:
     name: inception
@@ -129,5 +152,6 @@ secrets:
   wp_admin_password:
     file: ../secrets/wp_admin_password.txt
   wp_user_password:
-     file: ../secrets/wp_user_password.txt
-  
+    file: ../secrets/wp_user_password.txt
+  ftp_pass:
+    file: ../secrets/ftp_pass.txt
