@@ -104,8 +104,6 @@ services:
     image: ftp:inception
     container_name: ftp
     restart: always
-    networks:
-      - inception
     ports:
       - "21:21"
       - "21000-21010:21000-21010"
@@ -121,7 +119,16 @@ services:
       dockerfile: Dockerfile
     image: portainer:inception
     container_name: portainer
-  
+  static_site:
+    build:
+      context: ./requirements/bonus/static_site
+      dockerfile: Dockerfile
+    image: static_site:inception
+    container_name: static_site
+    ports:
+      - "80:80"
+    restart: unless_stopped
+
 volumes:
     mariadb-data:
       driver: local
