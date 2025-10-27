@@ -119,16 +119,15 @@ services:
       dockerfile: Dockerfile
     image: portainer:inception
     container_name: portainer
-  static_site:
+  static-site:
     build:
-      context: ./requirements/bonus/static_site
+      context: ./requirements/bonus/static-site
       dockerfile: Dockerfile
-    image: static_site:inception
-    container_name: static_site
+    image: static-site:inception
+    container_name: static-site
     ports:
       - "80:80"
-    restart: unless_stopped
-
+    restart: unless-stopped
 volumes:
     mariadb-data:
       driver: local
