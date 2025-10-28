@@ -24,6 +24,9 @@ if [ ! -f "/var/www/html/wp-config.php" ]; then
     --dbhost="${DB_HOST}" --dbpass="${DB_PASSWORD}" \
     --allow-root --force
 
+    wp config set WP_REDIS_HOST redis --type=constant --allow-root
+    wp config set WP_REDIS_PORT 6379 --type=constant --raw --allow-root
+    wp config set WP_CACHE true --type=constant --raw --allow-root
 
     wp core install --url="https://${DOMAIN_NAME}" \
     --title="${WP_TITLE}" --admin_user="${WP_ADMIN_USER}" \
@@ -33,6 +36,9 @@ if [ ! -f "/var/www/html/wp-config.php" ]; then
     wp user create  "${WP_USER}" "${WP_USER_EMAIL}"\
     --user_pass="${WP_USER_PASSWORD}" --role=author \
     --path="/var/www/html" --allow-root
+
+    wp plugin install redis-cache --activate --allow-root
+    wp redis enable --allow-root
 fi
 
 exec php-fpm83 -F
