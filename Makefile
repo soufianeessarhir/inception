@@ -6,11 +6,11 @@ COMPOSE_FILE=./srcs/docker-compose.yml
 all: build
 
 setup:
-	@mkdir -p ${DATA_PATH}/mariadb
-	@mkdir -p ${DATA_PATH}/wordpress
-	@mkdir -p ${DATA_PATH}/portainer
-	@sudo chown -R 1337:1337 ${DATA_PATH}/wordpress
-	@sudo chown -R 999:999 ${DATA_PATH}/mariadb
+	@mkdir -p $(DATA_PATH)/mariadb
+	@mkdir -p $(DATA_PATH)/wordpress
+	@mkdir -p $(DATA_PATH)/portainer
+	@sudo chown -R 1337:1337 $(DATA_PATH)/wordpress
+	@sudo chown -R 999:999 $(DATA_PATH)/mariadb
 
 build: setup
 	@docker compose -f $(COMPOSE_FILE) up -d --build

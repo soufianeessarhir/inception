@@ -39,6 +39,10 @@ if [ ! -f "/var/www/html/wp-config.php" ]; then
 
     wp plugin install redis-cache --activate --allow-root
     wp redis enable --allow-root
+
+    chown -R www:www /var/www/html
+    find /var/www/html -type d -exec chmod 755 {} \;
+    find /var/www/html -type f -exec chmod 644 {} \;
 fi
 
 exec php-fpm83 -F

@@ -6,6 +6,5 @@ RUN apk add --no-cache php83 php83-fpm php83-mysqli php83-json php83-curl php83-
     && chown -R www:www /var/www/html /run/php
 COPY --chmod=444 conf/www.conf /etc/php83/php-fpm.d/www.conf
 COPY --chmod=700 --chown=www:www tools/setup.sh /usr/local/bin/setup.sh
-USER www
 EXPOSE 9000
 ENTRYPOINT ["/usr/local/bin/setup.sh"]
