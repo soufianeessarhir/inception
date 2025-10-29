@@ -6,7 +6,7 @@ services:
     image: nginx:inception
     container_name: nginx
     volumes:
-      - wordpress-data:/var/www/html:ro
+      - wordpress-data:/var/www/html
     networks:
       - inception
     ports:
@@ -17,7 +17,7 @@ services:
     restart: unless-stopped
     depends_on:
       wordpress:
-        condition: service_healthy
+        condition: service_started
   wordpress:
     build:
       context: ./requirements/wordpress
@@ -77,6 +77,8 @@ services:
       - db_password
       - db_root_password
     restart: unless-stopped
+    stop_grace_period: 30s
+    stop_signal: SIGTERM
   redis:
     build:
       context: ./requirements/bonus/redis

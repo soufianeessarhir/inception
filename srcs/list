@@ -119,7 +119,7 @@ http
         }
     }
 
-        server 
+    server 
     {
         listen 443 ssl;
         server_name static.sessarhi.42.fr;
@@ -129,7 +129,6 @@ http
         ssl_certificate /etc/nginx/nginx.cert;
         ssl_certificate_key /etc/nginx/nginx.key;
         ssl_protocols  TLSv1.3;
-        root /var/www/html/;
         location /
         {
             proxy_pass http://static-site:80;
@@ -537,7 +536,7 @@ CMD ["redis-server", "/etc/redis.conf", "--daemonize", "no"]
 ===== ./requirements/bonus/adminer/Dockerfile =====
 FROM alpine:3.21
 RUN apk add --no-cache  php83 php83-session php83-mysqli php83-pdo_mysql php83-json \
-    && mkdir -p /var/www/html && wget -O /var/www/html/adminer.php \
+    && mkdir -p /var/www/html && wget -O /var/www/html/index.php \
     https://github.com/vrana/adminer/releases/download/v5.4.1/adminer-5.4.1-mysql.php \
     && chown -R nobody:nobody /var/www/html
 
@@ -653,7 +652,7 @@ services:
     restart: unless-stopped
     depends_on:
       wordpress:
-        condition: service_healthy
+        condition: service_started
   wordpress:
     build:
       context: ./requirements/wordpress
@@ -936,7 +935,7 @@ http
         }
     }
 
-        server 
+    server 
     {
         listen 443 ssl;
         server_name static.sessarhi.42.fr;
@@ -946,7 +945,6 @@ http
         ssl_certificate /etc/nginx/nginx.cert;
         ssl_certificate_key /etc/nginx/nginx.key;
         ssl_protocols  TLSv1.3;
-        root /var/www/html/;
         location /
         {
             proxy_pass http://static-site:80;
@@ -1354,7 +1352,7 @@ CMD ["redis-server", "/etc/redis.conf", "--daemonize", "no"]
 ===== ./requirements/bonus/adminer/Dockerfile =====
 FROM alpine:3.21
 RUN apk add --no-cache  php83 php83-session php83-mysqli php83-pdo_mysql php83-json \
-    && mkdir -p /var/www/html && wget -O /var/www/html/adminer.php \
+    && mkdir -p /var/www/html && wget -O /var/www/html/index.php \
     https://github.com/vrana/adminer/releases/download/v5.4.1/adminer-5.4.1-mysql.php \
     && chown -R nobody:nobody /var/www/html
 
@@ -1470,7 +1468,7 @@ services:
     restart: unless-stopped
     depends_on:
       wordpress:
-        condition: service_healthy
+        condition: service_started
   wordpress:
     build:
       context: ./requirements/wordpress
