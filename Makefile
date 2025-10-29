@@ -30,7 +30,7 @@ clean: down
 
 fclean:clean
 	@sudo docker volume rm $$(docker image ls -q) 2>/dev/null || true
-	@rm -rf $(DATA_PATH)
+	@sudo rm -rf $(DATA_PATH)
 
 re: clean all
 
