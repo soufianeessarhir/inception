@@ -10,22 +10,37 @@ if [ ! -f "${CERTS_PATH}/nginx.cert" ] || [ ! -f "${CERTS_PATH}/nginx.key" ] ; t
     chmod 644  "${CERTS_PATH}/nginx.cert"
     chmod 600  "${CERTS_PATH}/nginx.key"
 fi
-
-exec "nginx"
+exec nginx
 ===== ./requirements/nginx/conf/nginx.conf =====
-events {}
+events 
+{
+    worker_connections 1024;
+}
 
 daemon off;
 
 http
 {
-    ssl_session_cache   shared:SSL:10m;
-    ssl_session_timeout 10m;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 
-    include       /etc/nginx/mime.types;
-    default_type  application/octet-stream;
-    sendfile        on;
-    keepalive_timeout  65;
+    limit_req_zone $binary_remote_addr zone=wp_limit:10m rate=10r/s;
+    limit_req_zone $binary_remote_addr zone=admin_limit:10m rate=5r/s;
+
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 10m;
+    ssl_protocols TLSv1.3;
+    ssl_ciphers 'ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384';
+    ssl_prefer_server_ciphers off;
+
+
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+    sendfile on;
+    keepalive_timeout 65;
+    client_max_body_size 64M;
 
     server
     {
@@ -36,10 +51,12 @@ http
 
         ssl_certificate /etc/nginx/nginx.cert;
         ssl_certificate_key /etc/nginx/nginx.key;
-        ssl_protocols  TLSv1.3;
+        ssl_protocols TLSv1.3;
 
         root /var/www/html;
-        index index.php index.html index.htm;
+        index index.php index.html;
+        limit_req zone=wp_limit burst=20 nodelay;
+
         location /
         {
             try_files $uri $uri/ /index.php?$args;
@@ -53,10 +70,51 @@ http
             include fastcgi_params;
             fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
             fastcgi_param PATH_INFO $fastcgi_path_info;
+            fastcgi_read_timeout 300;
+            fastcgi_buffer_size 128k;
+            fastcgi_buffers 256 16k;
+            fastcgi_busy_buffers_size 256k;
+        }
+        location ~ /\.ht 
+        {
+            deny all;
+        }
+        
+        location = /xmlrpc.php 
+        {
+            deny all;
+        }
+        
+        location ~* /wp-content/uploads/.*\.php$ 
+        {
+            deny all;
         }
         
     }
+
     server 
+    {
+        listen 443 ssl;
+        server_name adminer.sessarhi.42.fr;
+        http2 on;
+        keepalive_timeout 75;
+
+        limit_req zone=admin_limit burst=10 nodelay;
+
+        ssl_certificate /etc/nginx/nginx.cert;
+        ssl_certificate_key /etc/nginx/nginx.key;
+        ssl_protocols TLSv1.3;
+        location /
+        {
+            proxy_pass http://adminer:8080;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+    }
+
+        server 
     {
         listen 443 ssl;
         server_name static.sessarhi.42.fr;
@@ -75,31 +133,14 @@ http
             proxy_set_header X-Forwarded-Proto $scheme;
         }
     }
-    server 
-    {
-        listen 443 ssl;
-        server_name adminer.sessarhi.42.fr;
-        http2 on;
-        keepalive_timeout 75;
-
-        ssl_certificate /etc/nginx/nginx.cert;
-        ssl_certificate_key /etc/nginx/nginx.key;
-        ssl_protocols  TLSv1.3;
-        location /
-        {
-            proxy_pass http://adminer:8080;
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
-        }
-    }
 }
 ===== ./requirements/nginx/Dockerfile =====
 FROM alpine:3.21
-RUN apk add --no-cache nginx openssl && rm -rf /var/lib/apk
+RUN apk add --no-cache nginx openssl && mkdir mkdir -p /var/cache/nginx /var/log/nginx && \
+    chown -R nginx:nginx /var/cache/nginx /var/log/nginx /etc/nginx
 COPY --chmod=644 conf/nginx.conf /etc/nginx/nginx.conf
-COPY --chmod=700 --chown=nginx tools/setup.sh /usr/local/bin/setup.sh
+COPY --chmod=700 --chown=nginx:nginx tools/setup.sh /usr/local/bin/setup.sh
+USER nginx
 EXPOSE 443
 ENTRYPOINT ["/usr/local/bin/setup.sh"]
 ===== ./requirements/nginx/.dockerignore =====
@@ -145,7 +186,8 @@ RUN apk add --no-cache mariadb mariadb-client && \
 mkdir -p  /run/mysqld/  /var/lib/mysql/ && \
 chown -R mysql:mysql /run/mysqld/  /var/lib/mysql
 COPY --chmod=644  conf/server.conf /etc/my.cnf.d/mariadb-server.cnf
-COPY --chmod=700  tools/setup.sh /usr/local/bin/setup.sh
+COPY --chmod=700 --chown=mysql:mysql tools/setup.sh /usr/local/bin/setup.sh
+USER mysql
 EXPOSE 3306
 ENTRYPOINT ["/usr/local/bin/setup.sh"]
 ===== ./requirements/mariadb/.dockerignore =====
@@ -153,9 +195,10 @@ ENTRYPOINT ["/usr/local/bin/setup.sh"]
 ===== ./requirements/bonus/ftp/tools/setup.sh =====
 #!/bin/sh
 FTP_PASS=$(cat /run/secrets/ftp_pass)
-adduser -D -h /var/www/html -u 82 $FTP_USER 
+addgroup -g 1337 -S www && \
+adduser -u 1337 -D -S -G www -h /var/www/html -s /sbin/nologin $FTP_USER
 echo "$FTP_USER:$FTP_PASS" | chpasswd
-chown -R "$FTP_USER:$FTP_USER" /var/www/html
+chown -R "$FTP_USER:www" /var/www/html
 exec vsftpd /etc/vsftpd/vsftpd.conf
 ===== ./requirements/bonus/ftp/conf/vsftpd.conf =====
 listen=YES
@@ -167,6 +210,7 @@ local_umask=022
 dirmessage_enable=YES
 use_localtime=YES
 xferlog_enable=YES
+xferlog_file=/var/log/vsftpd.log
 connect_from_port_20=NO
 chroot_local_user=YES
 secure_chroot_dir=/var/run/vsftpd/empty
@@ -178,178 +222,18 @@ pasv_address=0.0.0.0
 user_sub_token=$USER
 local_root=/var/www/html
 allow_writeable_chroot=YES
+userlist_enable=YES
+userlist_file=/etc/vsftpd/user_list
+userlist_deny=NO
+seccomp_sandbox=NO
 ===== ./requirements/bonus/ftp/Dockerfile =====
 FROM alpine:3.21
-RUN apk add --no-cache vsftpd && mkdir -p /var/www/html &&   mkdir -p /var/run/vsftpd/empty
+RUN apk add --no-cache vsftpd && mkdir -p /var/www/html /var/run/vsftpd/empty
 COPY --chmod=444 conf/vsftpd.conf /etc/vsftpd/vsftpd.conf
 COPY --chmod=744 tools/setup.sh /usr/local/bin/setup.sh
 EXPOSE 21 21000-21010
 ENTRYPOINT ["/usr/local/bin/setup.sh"]
 
-===== ./requirements/bonus/static-site/tools/app/styles.css =====
-body {
-  background-image: url(https://cdn.freecodecamp.org/curriculum/css-cafe/beans.jpg);
-  font-family: sans-serif;
-  padding: 20px;
-}
-
-h1 {
-  font-size: 40px;
-  margin-top: 0;
-  margin-bottom: 15px;
-}
-
-h2 {
-  font-size: 30px;
-}
-
-.established {
-  font-style: italic;
-}
-
-h1, h2, p {
-  text-align: center;
-}
-
-.menu {
-  width: 80%;
-  background-color: burlywood;
-  margin-left: auto;
-  margin-right: auto;
-  padding: 20px;
-  max-width: 500px;
-}
-
-img {
-  display: block;
-  margin-left: auto;
-  margin-right: auto;
-  margin-top:-25px;
-}
-
-hr {
-  height: 2px;
-  background-color: brown;
-  border-color: brown;
-}
-
-.bottom-line {
-  margin-top: 25px;
-}
-
-h1, h2 {
-  font-family: Impact, serif;
-}
-
-.item p {
-  display: inline-block;
-  margin-top: 5px;
-  margin-bottom: 5px;
-  font-size: 18px;
-}
-
-.flavor, .dessert {
-  text-align: left;
-  width: 75%;
-}
-
-.price {
-  text-align: right;
-  width: 25%;
-}
-
-/* FOOTER */
-
-footer {
-  font-size: 14px;
-}
-
-address {
-  font-style: normal;
-}
-
-.address {
-  margin-bottom: 5px;
-}
-
-a {
-  color: black;
-}
-
-a:visited {
-  color: black;
-}
-
-a:hover {
-  color: brown;
-}
-
-a:active {
-  color: brown;
-}
-===== ./requirements/bonus/static-site/tools/app/index.html =====
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Cafe Menu</title>
-    <link href="styles.css" rel="stylesheet"/>
-  </head>
-  <body>
-    <div class="menu">
-      <main>
-        <h1>CAMPER CAFE</h1>
-        <p class="established">Est. 2020</p>
-        <hr>
-        <section>
-          <h2>Coffee</h2>
-          <img src="https://cdn.freecodecamp.org/curriculum/css-cafe/coffee.jpg" alt="coffee icon"/>
-          <article class="item">
-            <p class="flavor">French Vanilla</p><p class="price">3.00</p>
-          </article>
-          <article class="item">
-            <p class="flavor">Caramel Macchiato</p><p class="price">3.75</p>
-          </article>
-          <article class="item">
-            <p class="flavor">Pumpkin Spice</p><p class="price">3.50</p>
-          </article>
-          <article class="item">
-            <p class="flavor">Hazelnut</p><p class="price">4.00</p>
-          </article>
-          <article class="item">
-            <p class="flavor">Mocha</p><p class="price">4.50</p>
-          </article>
-        </section>
-        <section>
-          <h2>Desserts</h2>
-          <img src="https://cdn.freecodecamp.org/curriculum/css-cafe/pie.jpg" alt="pie icon"/>
-          <article class="item">
-            <p class="dessert">Donut</p><p class="price">1.50</p>
-          </article>
-          <article class="item">
-            <p class="dessert">Cherry Pie</p><p class="price">2.75</p>
-          </article>
-          <article class="item">
-            <p class="dessert">Cheesecake</p><p class="price">3.00</p>
-          </article>
-          <article class="item">
-            <p class="dessert">Cinnamon Roll</p><p class="price">2.50</p>
-          </article>
-        </section>
-      </main>
-      <hr class="bottom-line">
-      <footer>
-        <address>
-          <p>
-            <a href="https://www.freecodecamp.org" target="_blank">Visit our website</a>
-          </p>
-          <p class="address">123 Free Code Camp Drive</p>
-        </address>
-      </footer>
-    </div>
-  </body>
-</html>
 ===== ./requirements/bonus/static-site/conf/nginx.conf =====
 events {}
 
@@ -465,7 +349,9 @@ jemalloc-bg-thread yes
 
 ===== ./requirements/bonus/redis/Dockerfile =====
 FROM alpine:3.21
-RUN apk add --no-cache redis
+RUN apk add --no-cache redis && mkdir -p /var/log/redis /var/lib/redis /run/redis \
+&& chown -R redis:redis  /var/log/redis /var/lib/redis /run/redis
+USER redis
 COPY --chmod=444 conf/redis.conf /etc/redis.conf
 CMD ["redis-server", "/etc/redis.conf", "--daemonize", "no"]
 ===== ./requirements/bonus/adminer/Dockerfile =====
@@ -473,7 +359,7 @@ FROM alpine:3.21
 RUN apk add --no-cache  php83 php83-session php83-mysqli php83-pdo_mysql php83-json \
     && mkdir -p /var/www/html && wget -O adminer.php https://github.com/vrana/adminer/releases/download/v5.4.1/adminer-5.4.1-mysql.php
 EXPOSE 8080
-CMD ["php", "-S", "127.0.0.1:8080", "-t", "/var/www/html"]
+CMD ["php", "-S", "0.0.0.0:8080", "-t", "/var/www/html"]
 ===== ./requirements/wordpress/tools/setup.sh =====
 #!/bin/sh
 
@@ -501,6 +387,9 @@ if [ ! -f "/var/www/html/wp-config.php" ]; then
     --dbhost="${DB_HOST}" --dbpass="${DB_PASSWORD}" \
     --allow-root --force
 
+    wp config set WP_REDIS_HOST redis --type=constant --allow-root
+    wp config set WP_REDIS_PORT 6379 --type=constant --raw --allow-root
+    wp config set WP_CACHE true --type=constant --raw --allow-root
 
     wp core install --url="https://${DOMAIN_NAME}" \
     --title="${WP_TITLE}" --admin_user="${WP_ADMIN_USER}" \
@@ -510,19 +399,27 @@ if [ ! -f "/var/www/html/wp-config.php" ]; then
     wp user create  "${WP_USER}" "${WP_USER_EMAIL}"\
     --user_pass="${WP_USER_PASSWORD}" --role=author \
     --path="/var/www/html" --allow-root
+
+    wp plugin install redis-cache --activate --allow-root
+    wp redis enable --allow-root
+
+    chown -R www:www /var/www/html
+    find /var/www/html -type d -exec chmod 755 {} \;
+    find /var/www/html -type f -exec chmod 644 {} \;
 fi
 
 exec php-fpm83 -F
 ===== ./requirements/wordpress/conf/www.conf =====
 [www]
-user = nobody
+user = www
+group = www
 listen = 9000
 pm = dynamic
 pm.max_children = 10
 pm.start_servers = 3
 pm.min_spare_servers = 2
 pm.max_spare_servers = 5
-pm.process_idle_timeout = 5s;
+pm.process_idle_timeout = 5s
 pm.max_requests = 500
 clear_env = no
 security.limit_extensions = .php
@@ -530,13 +427,14 @@ security.limit_extensions = .php
 FROM alpine:3.21
 RUN apk add --no-cache php83 php83-fpm php83-mysqli php83-json php83-curl php83-dom php83-exif \
     php83-fileinfo php83-mbstring php83-openssl php83-xml php83-zip php83-phar php83-intl php83-gd php83-iconv \
-    php83-pecl-imagick php83-session php83-tokenizer curl && mkdir -p /var/www/html \
-    /run/php 
+    php83-pecl-imagick php83-session php83-tokenizer curl php83-redis php83-pecl-redis && \
+    addgroup -g 1337 -S www && adduser -u 1337 -DS -G www www && mkdir -p /var/www/html /run/php \
+    && chown -R www:www /var/www/html /run/php
 COPY --chmod=444 conf/www.conf /etc/php83/php-fpm.d/www.conf
-COPY --chmod=700 tools/setup.sh /usr/local/bin/setup.sh
+COPY --chmod=700 --chown=www:www tools/setup.sh /usr/local/bin/setup.sh
 EXPOSE 9000
 ENTRYPOINT ["/usr/local/bin/setup.sh"]
-CMD ["php-fpm83","-F"]
+
 ===== ./requirements/wordpress/.dockerignore =====
 
 ===== ./.env =====
@@ -571,13 +469,20 @@ services:
       - DOMAIN_NAME
     restart: unless-stopped
     depends_on:
-      - wordpress
+      wordpress:
+        condition: service_healthy
   wordpress:
     build:
       context: ./requirements/wordpress
       dockerfile: Dockerfile
     image: wordpress:inception
     container_name: wordpress
+    healthcheck:
+      test: ["CMD-SHELL", "php-fpm83 -t || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     volumes: 
       - wordpress-data:/var/www/html
     networks:
@@ -625,6 +530,9 @@ services:
       - db_password
       - db_root_password
     restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
   redis:
     build:
       context: ./requirements/bonus/redis
@@ -675,6 +583,12 @@ services:
     image: portainer:inception
     container_name: portainer
     restart: always
+    ports:
+      - "9000:9000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer-data:/data
+  
   static-site:
     build:
       context: ./requirements/bonus/static-site
@@ -690,18 +604,20 @@ volumes:
       driver_opts:
           type: none
           o: bind
-          device: /home/${USER}/data/mariadb
+          device: /home/sessarhi/data/mariadb
     wordpress-data:
       driver: local
       driver_opts:
         type: none
         o: bind
-        device: /home/${USER}/data/wordpress
+        device: /home/sessarhi/data/wordpress
     portainer-data:
-        driver: local
-        driver_opts:
+      driver: local
+      driver_opts:
+          type: none
           o: bind
-          device: /home/${USER}/data/portiner
+          device: /home/sessarhi/data/portainer
+
 networks:
   inception:
     name: inception
@@ -717,4 +633,3 @@ secrets:
      file: ../secrets/wp_user_password.txt
   ftp_pass:
     file: ../secrets/ftp_pass.txt
-
