@@ -9,6 +9,7 @@ setup:
 	@mkdir -p $(DATA_PATH)/mariadb
 	@mkdir -p $(DATA_PATH)/wordpress
 	@mkdir -p $(DATA_PATH)/portainer
+	@sudo echo ""
 	@sudo chown -R 1337:1337 $(DATA_PATH)/wordpress
 	@sudo chown -R 999:999 $(DATA_PATH)/mariadb
 

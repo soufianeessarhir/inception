@@ -2,6 +2,8 @@
 DB_PASSWORD=$(cat /run/secrets/db_password)
 DB_ROOT_PASSWORD=$(cat /run/secrets/db_root_password)
 
+chown -R mysql:mysql /var/lib/mysql /run/mysqld
+
 if [ ! -d /var/lib/mysql/mysql  ]; then
 mariadb-install-db --user=mysql --datadir=/var/lib/mysql
 cat << EOF > /tmp/init_secure.sql
