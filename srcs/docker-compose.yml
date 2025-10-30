@@ -6,7 +6,9 @@ services:
     image: nginx:inception
     container_name: nginx
     volumes:
-      - wordpress-data:/var/www/html
+      - type : bind
+        source : /home/sessarhi/data/wordpress
+        target : /var/www/html
     networks:
       - inception
     ports:
@@ -30,8 +32,10 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
-    volumes: 
-      - wordpress-data:/var/www/html
+    volumes:
+      - type: bind
+        source : /home/sessarhi/data/wordpress
+        target : /var/www/html
     networks:
       - inception
     environment:
@@ -61,7 +65,9 @@ services:
     image: mariadb:inception
     container_name: mariadb
     volumes:
-      - mariadb-data:/var/lib/mysql
+      - type : bind
+        source : /home/sessarhi/data/mariadb
+        target : /var/lib/mysql
     networks:
       - inception
     healthcheck:
@@ -121,7 +127,9 @@ services:
     secrets:
       - ftp_pass
     volumes:
-      - wordpress-data:/var/www/html
+      - type : bind
+        source : /home/sessarhi/data/wordpress
+        target : /var/www/html
   portainer:
     build:
       context: ./requirements/bonus/portainer
@@ -133,8 +141,9 @@ services:
       - "9443:9443"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - portainer-data:/data
-  
+      - type : bind
+        source : /home/sessarhi/data/portainer
+        target : /data
   static-site:
     build:
       context: ./requirements/bonus/static-site
@@ -144,26 +153,6 @@ services:
     restart: unless-stopped
     networks:
       - inception
-volumes:
-    mariadb-data:
-      driver: local
-      driver_opts:
-          type: none
-          o: bind
-          device: /home/sessarhi/data/mariadb
-    wordpress-data:
-      driver: local
-      driver_opts:
-        type: none
-        o: bind
-        device: /home/sessarhi/data/wordpress
-    portainer-data:
-      driver: local
-      driver_opts:
-          type: none
-          o: bind
-          device: /home/sessarhi/data/portainer
-
 networks:
   inception:
     name: inception
