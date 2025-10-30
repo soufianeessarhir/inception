@@ -19,7 +19,11 @@ services:
     restart: unless-stopped
     depends_on:
       wordpress:
-        condition: service_started
+        condition: service_healthy
+      adminer:
+        condition : service_started
+      static-site:
+        condition : service_started
   wordpress:
     build:
       context: ./requirements/wordpress
@@ -27,7 +31,7 @@ services:
     image: wordpress:inception
     container_name: wordpress
     healthcheck:
-      test: ["CMD-SHELL", "php-fpm83 -t || exit 1"]
+      test: ["CMD-SHELL", "nc -z localhost 9000 || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 3
