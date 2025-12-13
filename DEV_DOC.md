@@ -393,9 +393,12 @@ The project uses **bind mounts** to persist data on the host filesystem:
 
 ```yaml
 volumes:
-  - type: bind
-    source: /home/sessarhi/data/wordpress
-    target: /var/www/html
+  mariadb-data:
+    driver: local
+    driver_opts:
+        type: none
+        o: bind
+        device: /home/${USER}/data/mariadb
 ```
 
 ### Data Locations
@@ -610,7 +613,7 @@ php -v
 **Testing FTP**:
 ```bash
 # From another machine or terminal
-ftp localhost 21
+lftp localhost 21
 # Login with ftpuser and password from secrets/ftp_pass.txt
 ```
 
