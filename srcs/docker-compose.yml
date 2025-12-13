@@ -34,7 +34,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 10s
+      start_period: 100s
     volumes:
       - wordpress-data:/var/www/html
     networks:
@@ -75,7 +75,7 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
-      start_period: 10s
+      start_period: 30s
     environment:
       - DB_NAME
       - DB_USER
@@ -100,7 +100,7 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
-      start_period: 10s
+      start_period: 30s
 
   adminer:
     build:
@@ -142,8 +142,10 @@ services:
     ports:
       - "9443:9443"
     volumes:
-      - portainer-data:/data
-      - /var/run/docker.sock:/var/run/docker.sock
+    - /var/run/docker.sock:/var/run/docker.sock
+    - type: bind
+      source: /home/sessarhi/data/portainer
+      target: /data
 
   static-site:
     build:
@@ -184,9 +186,3 @@ volumes:
       type: none
       o: bind
       device: /home/sessarhi/data/wordpress
-  portainer-data:
-      driver: local
-      driver_opts:
-        type: none
-        o: bind
-        device: /home/sessarhi/data/portainer
