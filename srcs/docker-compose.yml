@@ -6,7 +6,7 @@ services:
     image: nginx:inception
     container_name: nginx
     volumes:
-      - wordpress-data : /var/www/html
+      - wordpress-data:/var/www/html
     networks:
       - inception
     ports:
@@ -36,7 +36,7 @@ services:
       retries: 3
       start_period: 10s
     volumes:
-      - wordpress-data : /var/www/html
+      - wordpress-data:/var/www/html
     networks:
       - inception
     environment:
@@ -67,7 +67,7 @@ services:
     image: mariadb:inception
     container_name: mariadb
     volumes:
-      - mariadb-data : /var/lib/mysql
+      - mariadb-data:/var/lib/mysql
     networks:
       - inception
     healthcheck:
@@ -130,7 +130,7 @@ services:
     secrets:
       - ftp_pass
     volumes:
-      - wordpress-data : /var/www/html
+      - wordpress-data:/var/www/html
 
   portainer:
     build:
@@ -142,8 +142,8 @@ services:
     ports:
       - "9443:9443"
     volumes:
+      - portainer-data:/data
       - /var/run/docker.sock:/var/run/docker.sock
-      - portainer-data : /data
 
   static-site:
     build:
@@ -177,15 +177,16 @@ volumes:
     driver_opts:
         type: none
         o: bind
-        device: /home/${USER}/data/mariadb
+        device: /home/sessarhi/data/mariadb
   wordpress-data:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: /home/${USER}/data/wordpress
+      device: /home/sessarhi/data/wordpress
   portainer-data:
       driver: local
       driver_opts:
+        type: none
         o: bind
-        device: /home/${USER}/data/portiner
+        device: /home/sessarhi/data/portainer
