@@ -75,7 +75,7 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
-      start_period: 30s
+      start_period: 100s
     environment:
       - DB_NAME
       - DB_USER
@@ -83,7 +83,7 @@ services:
       - db_password
       - db_root_password
     restart: unless-stopped
-    stop_grace_period: 30s
+    stop_grace_period: 100s
     stop_signal: SIGTERM
 
   redis:
@@ -100,7 +100,7 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
-      start_period: 30s
+      start_period: 100s
 
   adminer:
     build:
