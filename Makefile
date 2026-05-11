@@ -1,5 +1,5 @@
 NAME = inception
-DATA_PATH = /home/sessarhi/data
+DATA_PATH = ${$HOME}/data
 COMPOSE_FILE = ./srcs/docker-compose.yml
 
 .PHONY: all setup build up start down restart clean fclean re logs status help
@@ -10,8 +10,8 @@ setup:
 	@mkdir -p $(DATA_PATH)/mariadb || true
 	@mkdir -p $(DATA_PATH)/wordpress || true
 	@mkdir -p $(DATA_PATH)/portainer || true
-	@sudo chown -R 1337:1337 $(DATA_PATH)/wordpress 2>/dev/null || true
-	@sudo chown -R 999:999 $(DATA_PATH)/mariadb 2>/dev/null || true
+	@ chown -R 1337:1337 $(DATA_PATH)/wordpress 2>/dev/null || true
+	@ chown -R 999:999 $(DATA_PATH)/mariadb 2>/dev/null || true
 build: setup
 	@docker compose -f $(COMPOSE_FILE) up -d --build || exit 1
 up:
@@ -35,7 +35,7 @@ fclean: down
 	@if [ -n "$$(docker image ls -q)" ]; then \
 		docker rmi -f $$(docker image ls -q) 2>/dev/null || true; \
 	fi
-	@sudo rm -rf $(DATA_PATH) 2>/dev/null || true
+	@ rm -rf $(DATA_PATH) 2>/dev/null || true
 
 re: fclean all
 
